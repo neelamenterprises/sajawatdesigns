@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { Metadata } from "next";
 import { getProductBySlug, getRelatedProducts, getCategoryBySlug } from "@/lib/queries";
 import { PlatformButtonGroup } from "@/components/ui/PlatformButton";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
+import { ProductGallery } from "@/components/products/ProductGallery";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Check, Heart, Share2 } from "lucide-react";
@@ -77,44 +77,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
             <div className="grid gap-10 lg:grid-cols-2">
                 {/* Image Gallery */}
-                <div className="space-y-4">
-                    {/* Main Image — warm ivory background */}
-                    <div className="relative aspect-square overflow-hidden rounded-2xl border border-border/30 bg-[#faf7f2]">
-                        <Image
-                            src={product.images[0] || "/placeholder.jpg"}
-                            alt={product.name}
-                            fill
-                            sizes="(max-width: 1024px) 100vw, 50vw"
-                            className="object-cover p-4"
-                            priority
-                        />
-                        {discount > 0 && (
-                            <Badge className="absolute left-4 top-4 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground shadow-sm">
-                                -{discount}%
-                            </Badge>
-                        )}
-                    </div>
-
-                    {/* Thumbnails */}
-                    {product.images.length > 1 && (
-                        <div className="flex gap-3 overflow-x-auto pb-2">
-                            {product.images.map((img, i) => (
-                                <div
-                                    key={i}
-                                    className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border-2 border-border/30 bg-[#faf7f2] transition-colors hover:border-primary"
-                                >
-                                    <Image
-                                        src={img}
-                                        alt={`${product.name} - Image ${i + 1}`}
-                                        fill
-                                        sizes="80px"
-                                        className="object-cover p-1"
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                <ProductGallery
+                    images={product.images}
+                    name={product.name}
+                    discount={discount}
+                />
 
                 {/* Product Info */}
                 <div className="flex flex-col">
