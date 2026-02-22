@@ -89,12 +89,12 @@ export function Footer() {
                         <ul className="space-y-3">
                             <li className="flex items-start gap-2 text-sm text-muted-foreground">
                                 <Mail className="mt-0.5 h-4 w-4 shrink-0" />
-                                <span>hello@sajawatdesigns.com</span>
+                                <span>mohit@sajawatdesigns.com</span>
                             </li>
-                            <li className="flex items-start gap-2 text-sm text-muted-foreground">
+                            {/* <li className="flex items-start gap-2 text-sm text-muted-foreground">
                                 <Phone className="mt-0.5 h-4 w-4 shrink-0" />
                                 <span>+91 98765 43210</span>
-                            </li>
+                            </li> */}
                             <li className="flex items-start gap-2 text-sm text-muted-foreground">
                                 <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
                                 <span>India</span>
