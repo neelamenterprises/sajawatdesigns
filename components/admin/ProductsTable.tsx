@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Product, Category } from "@/lib/types";
 import { deleteProduct, toggleProductField } from "@/lib/product-actions";
+import { useToast } from "@/components/admin/ToastProvider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,7 +14,18 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, MoreHorizontal, Pencil, Trash2, Eye, EyeOff, Star, TrendingUp, Search } from "lucide-react";
+import {
+    Plus,
+    MoreHorizontal,
+    Pencil,
+    Trash2,
+    Eye,
+    EyeOff,
+    Star,
+    TrendingUp,
+    Search,
+    Loader2,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 interface ProductsTableProps {
@@ -21,8 +33,14 @@ interface ProductsTableProps {
     categories: Category[];
 }
 
+// Tracks which action is in-flight for a specific product
+type ActionKey = "is_active" | "is_featured" | "is_trending" | "delete";
+
 export function ProductsTable({ products, categories }: ProductsTableProps) {
+    const { toast } = useToast();
     const [search, setSearch] = useState("");
+    // loadingMap[productId] = which action is loading (or undefined)
+    const [loadingMap, setLoadingMap] = useState<Record<string, ActionKey | undefined>>({});
 
     const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c.name]));
 
@@ -31,6 +49,74 @@ export function ProductsTable({ products, categories }: ProductsTableProps) {
             p.name.toLowerCase().includes(search.toLowerCase()) ||
             p.short_description.toLowerCase().includes(search.toLowerCase())
     );
+
+    function setLoading(productId: string, action: ActionKey | undefined) {
+        setLoadingMap((prev) => ({ ...prev, [productId]: action }));
+    }
+
+    async function handleToggle(
+        productId: string,
+        field: "is_active" | "is_featured" | "is_trending",
+        currentValue: boolean
+    ) {
+        setLoading(productId, field);
+        try {
+            const result = await toggleProductField(productId, field, currentValue);
+            if (result?.error) {
+                toast({
+                    variant: "error",
+                    message: "Could not update product — please try again.",
+                    detail: result.error,
+                });
+            } else {
+                const labels: Record<string, string> = {
+                    is_active: currentValue ? "deactivated" : "activated",
+                    is_featured: currentValue ? "unfeatured" : "featured",
+                    is_trending: currentValue ? "removed from trending" : "marked as trending",
+                };
+                toast({
+                    variant: "success",
+                    message: `Product ${labels[field]} successfully.`,
+                });
+            }
+        } catch (err) {
+            toast({
+                variant: "error",
+                message: "Something went wrong — please refresh and try again.",
+                detail: err instanceof Error ? err.message : String(err),
+            });
+        } finally {
+            setLoading(productId, undefined);
+        }
+    }
+
+    async function handleDelete(productId: string, productName: string) {
+        if (!confirm(`Delete "${productName}"? This cannot be undone.`)) return;
+        setLoading(productId, "delete");
+        try {
+            const result = await deleteProduct(productId);
+            if (result?.error) {
+                toast({
+                    variant: "error",
+                    message: "Could not delete product — please try again.",
+                    detail: result.error,
+                });
+            } else {
+                toast({
+                    variant: "success",
+                    message: `"${productName}" was deleted successfully.`,
+                });
+            }
+        } catch (err) {
+            toast({
+                variant: "error",
+                message: "Something went wrong while deleting — please try again.",
+                detail: err instanceof Error ? err.message : String(err),
+            });
+        } finally {
+            setLoading(productId, undefined);
+        }
+    }
 
     return (
         <div>
@@ -83,128 +169,158 @@ export function ProductsTable({ products, categories }: ProductsTableProps) {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-border/20">
-                        {filtered.map((product) => (
-                            <tr key={product.id} className="hover:bg-secondary/20 transition-colors">
-                                {/* Product name + thumbnail */}
-                                <td className="px-4 py-3">
-                                    <div className="flex items-center gap-3">
-                                        {product.images[0] && (
-                                            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-secondary/30">
-                                                <Image
-                                                    src={product.images[0]}
-                                                    alt={product.name}
-                                                    fill
-                                                    sizes="40px"
-                                                    className="object-cover"
-                                                />
-                                            </div>
-                                        )}
-                                        <div className="min-w-0">
-                                            <Link
-                                                href={`/admin/products/${product.id}/edit`}
-                                                className="truncate font-medium hover:text-primary transition-colors block"
-                                            >
-                                                {product.name}
-                                            </Link>
-                                            <p className="truncate text-xs text-muted-foreground">
-                                                {product.short_description}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </td>
-                                {/* Category */}
-                                <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                                    {categoryMap[product.category_id] || "—"}
-                                </td>
-                                {/* Price */}
-                                <td className="px-4 py-3">
-                                    <span className="font-medium">₹{product.price.toLocaleString("en-IN")}</span>
-                                    {product.mrp > product.price && (
-                                        <span className="ml-1.5 text-xs text-muted-foreground line-through">
-                                            ₹{product.mrp.toLocaleString("en-IN")}
-                                        </span>
-                                    )}
-                                </td>
-                                {/* Status badges */}
-                                <td className="hidden px-4 py-3 sm:table-cell">
-                                    <div className="flex flex-wrap gap-1">
-                                        <Badge
-                                            variant={product.is_active ? "default" : "secondary"}
-                                            className="text-[10px]"
-                                        >
-                                            {product.is_active ? "Active" : "Inactive"}
-                                        </Badge>
-                                        {product.is_featured && (
-                                            <Badge variant="secondary" className="gap-1 text-[10px]">
-                                                <Star className="h-2.5 w-2.5" />
-                                            </Badge>
-                                        )}
-                                        {product.is_trending && (
-                                            <Badge variant="secondary" className="gap-1 text-[10px]">
-                                                <TrendingUp className="h-2.5 w-2.5" />
-                                            </Badge>
-                                        )}
-                                    </div>
-                                </td>
-                                {/* Actions dropdown */}
-                                <td className="px-4 py-3 text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" className="w-44">
-                                            <DropdownMenuItem asChild>
-                                                <Link href={`/admin/products/${product.id}/edit`} className="gap-2">
-                                                    <Pencil className="h-3.5 w-3.5" /> Edit
+                        {filtered.map((product) => {
+                            const isLoadingAny = !!loadingMap[product.id];
+
+                            return (
+                                <tr
+                                    key={product.id}
+                                    className="hover:bg-secondary/20 transition-colors"
+                                    aria-busy={isLoadingAny}
+                                >
+                                    {/* Product name + thumbnail */}
+                                    <td className="px-4 py-3">
+                                        <div className="flex items-center gap-3">
+                                            {product.images[0] && (
+                                                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-secondary/30">
+                                                    <Image
+                                                        src={product.images[0]}
+                                                        alt={product.name}
+                                                        fill
+                                                        sizes="40px"
+                                                        className="object-cover"
+                                                    />
+                                                </div>
+                                            )}
+                                            <div className="min-w-0">
+                                                <Link
+                                                    href={`/admin/products/${product.id}/edit`}
+                                                    className="truncate font-medium hover:text-primary transition-colors block"
+                                                >
+                                                    {product.name}
                                                 </Link>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() =>
-                                                    toggleProductField(product.id, "is_active", product.is_active)
-                                                }
-                                                className="gap-2"
+                                                <p className="truncate text-xs text-muted-foreground">
+                                                    {product.short_description}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    {/* Category */}
+                                    <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
+                                        {categoryMap[product.category_id] || "—"}
+                                    </td>
+                                    {/* Price */}
+                                    <td className="px-4 py-3">
+                                        <span className="font-medium">₹{product.price.toLocaleString("en-IN")}</span>
+                                        {product.mrp > product.price && (
+                                            <span className="ml-1.5 text-xs text-muted-foreground line-through">
+                                                ₹{product.mrp.toLocaleString("en-IN")}
+                                            </span>
+                                        )}
+                                    </td>
+                                    {/* Status badges */}
+                                    <td className="hidden px-4 py-3 sm:table-cell">
+                                        <div className="flex flex-wrap gap-1">
+                                            <Badge
+                                                variant={product.is_active ? "default" : "secondary"}
+                                                className="text-[10px]"
                                             >
-                                                {product.is_active ? (
-                                                    <><EyeOff className="h-3.5 w-3.5" /> Deactivate</>
-                                                ) : (
-                                                    <><Eye className="h-3.5 w-3.5" /> Activate</>
-                                                )}
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() =>
-                                                    toggleProductField(product.id, "is_featured", product.is_featured)
-                                                }
-                                                className="gap-2"
-                                            >
-                                                <Star className="h-3.5 w-3.5" />
-                                                {product.is_featured ? "Unfeature" : "Feature"}
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() =>
-                                                    toggleProductField(product.id, "is_trending", product.is_trending)
-                                                }
-                                                className="gap-2"
-                                            >
-                                                <TrendingUp className="h-3.5 w-3.5" />
-                                                {product.is_trending ? "Untrend" : "Mark Trending"}
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem
-                                                onClick={() => {
-                                                    if (confirm("Delete this product?")) {
-                                                        deleteProduct(product.id);
+                                                {product.is_active ? "Active" : "Inactive"}
+                                            </Badge>
+                                            {product.is_featured && (
+                                                <Badge variant="secondary" className="gap-1 text-[10px]">
+                                                    <Star className="h-2.5 w-2.5" />
+                                                </Badge>
+                                            )}
+                                            {product.is_trending && (
+                                                <Badge variant="secondary" className="gap-1 text-[10px]">
+                                                    <TrendingUp className="h-2.5 w-2.5" />
+                                                </Badge>
+                                            )}
+                                        </div>
+                                    </td>
+                                    {/* Actions dropdown */}
+                                    <td className="px-4 py-3 text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    disabled={isLoadingAny}
+                                                    aria-label="Product actions"
+                                                >
+                                                    {isLoadingAny ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    )}
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-44">
+                                                <DropdownMenuItem asChild>
+                                                    <Link href={`/admin/products/${product.id}/edit`} className="gap-2">
+                                                        <Pencil className="h-3.5 w-3.5" /> Edit
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        handleToggle(product.id, "is_active", product.is_active)
                                                     }
-                                                }}
-                                                className="gap-2 text-destructive focus:text-destructive"
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5" /> Delete
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </td>
-                            </tr>
-                        ))}
+                                                    disabled={isLoadingAny}
+                                                    className="gap-2"
+                                                >
+                                                    {loadingMap[product.id] === "is_active" ? (
+                                                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Working…</>
+                                                    ) : product.is_active ? (
+                                                        <><EyeOff className="h-3.5 w-3.5" /> Deactivate</>
+                                                    ) : (
+                                                        <><Eye className="h-3.5 w-3.5" /> Activate</>
+                                                    )}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        handleToggle(product.id, "is_featured", product.is_featured)
+                                                    }
+                                                    disabled={isLoadingAny}
+                                                    className="gap-2"
+                                                >
+                                                    {loadingMap[product.id] === "is_featured" ? (
+                                                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Working…</>
+                                                    ) : (
+                                                        <><Star className="h-3.5 w-3.5" /> {product.is_featured ? "Unfeature" : "Feature"}</>
+                                                    )}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() =>
+                                                        handleToggle(product.id, "is_trending", product.is_trending)
+                                                    }
+                                                    disabled={isLoadingAny}
+                                                    className="gap-2"
+                                                >
+                                                    {loadingMap[product.id] === "is_trending" ? (
+                                                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Working…</>
+                                                    ) : (
+                                                        <><TrendingUp className="h-3.5 w-3.5" /> {product.is_trending ? "Untrend" : "Mark Trending"}</>
+                                                    )}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={() => handleDelete(product.id, product.name)}
+                                                    disabled={isLoadingAny}
+                                                    className="gap-2 text-destructive focus:text-destructive"
+                                                >
+                                                    {loadingMap[product.id] === "delete" ? (
+                                                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Deleting…</>
+                                                    ) : (
+                                                        <><Trash2 className="h-3.5 w-3.5" /> Delete</>
+                                                    )}
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </td>
+                                </tr>
+                            );
+                        })}
                         {filtered.length === 0 && (
                             <tr>
                                 <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-foreground">
