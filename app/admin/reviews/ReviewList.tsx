@@ -1,6 +1,7 @@
 import { getTestimonials } from "@/lib/queries";
 import { Star, MessageSquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ReviewActions } from "@/components/admin/ReviewActions";
 
 export async function ReviewList() {
     const reviews = await getTestimonials(true); // fetch all
@@ -19,17 +20,18 @@ export async function ReviewList() {
 
     return (
         <div className="rounded-md border bg-card">
-            <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b bg-muted/50 p-4 text-sm font-medium">
+            <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 border-b bg-muted/50 p-4 text-sm font-medium">
                 <div>Customer & Review</div>
                 <div className="w-24 text-center">Platform</div>
                 <div className="w-24 text-center">Rating</div>
                 <div className="w-24 text-right">Status</div>
+                <div className="w-10"></div>
             </div>
             <div className="divide-y">
                 {reviews.map((review) => (
                     <div
                         key={review.id}
-                        className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 p-4 text-sm transition-colors hover:bg-muted/50"
+                        className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 p-4 text-sm transition-colors hover:bg-muted/50"
                     >
                         <div>
                             <div className="font-medium text-foreground">{review.customer_name}</div>
@@ -52,6 +54,9 @@ export async function ReviewList() {
                             <Badge variant={review.is_active ? "default" : "secondary"}>
                                 {review.is_active ? "Active" : "Hidden"}
                             </Badge>
+                        </div>
+                        <div className="w-10">
+                            <ReviewActions review={review} />
                         </div>
                     </div>
                 ))}
