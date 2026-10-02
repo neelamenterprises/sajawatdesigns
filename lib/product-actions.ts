@@ -42,7 +42,10 @@ export async function createProduct(formData: FormData) {
     const { error } = await supabase.from("products").insert(data);
 
     if (error) {
-        return { error: error.message };
+        return {
+            error: "Could not save the product — please check your inputs and try again.",
+            detail: error.message,
+        };
     }
 
     revalidatePath("/");
@@ -81,7 +84,10 @@ export async function updateProduct(id: string, formData: FormData) {
     const { error } = await supabase.from("products").update(data).eq("id", id);
 
     if (error) {
-        return { error: error.message };
+        return {
+            error: "Could not update the product — please check your inputs and try again.",
+            detail: error.message,
+        };
     }
 
     revalidatePath("/");
@@ -95,7 +101,10 @@ export async function deleteProduct(id: string) {
     const { error } = await supabase.from("products").delete().eq("id", id);
 
     if (error) {
-        return { error: error.message };
+        return {
+            error: "Could not delete the product — please try again.",
+            detail: error.message,
+        };
     }
 
     revalidatePath("/");
@@ -115,7 +124,10 @@ export async function toggleProductField(
         .eq("id", id);
 
     if (error) {
-        return { error: error.message };
+        return {
+            error: "Could not update the product — please try again.",
+            detail: error.message,
+        };
     }
 
     revalidatePath("/");
