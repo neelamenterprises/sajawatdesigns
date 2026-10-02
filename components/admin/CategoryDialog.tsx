@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ import {
 import { Category } from "@/lib/types";
 import { createCategory, updateCategory } from "@/lib/category-actions";
 import { ImageUpload } from "@/components/admin/ImageUpload";
+import { useToast } from "@/components/admin/ToastProvider";
+import { Loader2, Save } from "lucide-react";
 
 interface CategoryDialogProps {
     category?: Category;
@@ -21,9 +23,9 @@ interface CategoryDialogProps {
 }
 
 export function CategoryDialog({ category, trigger }: CategoryDialogProps) {
+    const { toast } = useToast();
     const [open, setOpen] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [isPending, startTransition] = useTransition();
     const [imageUrls, setImageUrls] = useState<string[]>(
         category?.image_url ? [category.image_url] : []
     );
@@ -31,34 +33,52 @@ export function CategoryDialog({ category, trigger }: CategoryDialogProps) {
     const isEditing = !!category;
 
     async function handleSubmit(formData: FormData) {
-        setLoading(true);
-        setError(null);
-
-        // Set the image URL from upload
         formData.set("image_url", imageUrls[0] || "");
 
-        const result = isEditing
-            ? await updateCategory(category!.id, formData)
-            : await createCategory(formData);
+        startTransition(async () => {
+            try {
+                const result = isEditing
+                    ? await updateCategory(category!.id, formData)
+                    : await createCategory(formData);
 
-        if (result?.error) {
-            setError(result.error);
-            setLoading(false);
-        } else {
-            setOpen(false);
-            setLoading(false);
-        }
+                if (result?.error) {
+                    toast({
+                        variant: "error",
+                        message: result.error,
+                        detail: (result as { error: string; detail?: string }).detail,
+                        duration: 8000,
+                    });
+                } else {
+                    toast({
+                        variant: "success",
+                        message: isEditing
+                            ? `"${category!.name}" was updated successfully.`
+                            : "New category created successfully.",
+                    });
+                    setOpen(false);
+                }
+            } catch (err) {
+                toast({
+                    variant: "error",
+                    message: "Something went wrong — please try again.",
+                    detail: err instanceof Error ? err.message : String(err),
+                });
+            }
+        });
     }
 
     return (
-        <Dialog open={open} onOpenChange={(v) => {
-            setOpen(v);
-            if (v) {
-                // Reset image state when opening
-                setImageUrls(category?.image_url ? [category.image_url] : []);
-                setError(null);
-            }
-        }}>
+        <Dialog
+            open={open}
+            onOpenChange={(v) => {
+                if (isPending) return; // Prevent closing while saving
+                setOpen(v);
+                if (v) {
+                    // Reset image state when opening
+                    setImageUrls(category?.image_url ? [category.image_url] : []);
+                }
+            }}
+        >
             <DialogTrigger asChild>{trigger}</DialogTrigger>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
@@ -67,13 +87,14 @@ export function CategoryDialog({ category, trigger }: CategoryDialogProps) {
                     </DialogTitle>
                 </DialogHeader>
 
-                <form action={handleSubmit} className="space-y-4">
-                    {error && (
-                        <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-                            {error}
-                        </div>
-                    )}
+                {/* Loading bar at top of dialog */}
+                {isPending && (
+                    <div className="absolute inset-x-0 top-0 h-0.5 overflow-hidden rounded-t-lg">
+                        <div className="h-full w-full animate-[loading-bar_1.5s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-primary to-transparent" />
+                    </div>
+                )}
 
+                <form action={handleSubmit} className="space-y-4">
                     <div>
                         <label className="mb-1.5 block text-sm font-medium">Name</label>
                         <Input
@@ -81,6 +102,7 @@ export function CategoryDialog({ category, trigger }: CategoryDialogProps) {
                             defaultValue={category?.name}
                             placeholder="e.g. Rings"
                             required
+                            disabled={isPending}
                         />
                     </div>
 
@@ -90,6 +112,7 @@ export function CategoryDialog({ category, trigger }: CategoryDialogProps) {
                             name="description"
                             defaultValue={category?.description || ""}
                             placeholder="Brief description of the category"
+                            disabled={isPending}
                         />
                     </div>
 
@@ -120,11 +143,22 @@ export function CategoryDialog({ category, trigger }: CategoryDialogProps) {
                             type="button"
                             variant="outline"
                             onClick={() => setOpen(false)}
+                            disabled={isPending}
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={loading}>
-                            {loading ? "Saving..." : isEditing ? "Save Changes" : "Create"}
+                        <Button type="submit" disabled={isPending} className="gap-2 min-w-[110px]">
+                            {isPending ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Saving…
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="h-4 w-4" />
+                                    {isEditing ? "Save Changes" : "Create"}
+                                </>
+                            )}
                         </Button>
                     </div>
                 </form>

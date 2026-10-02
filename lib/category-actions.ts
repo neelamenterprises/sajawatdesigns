@@ -24,7 +24,10 @@ export async function createCategory(formData: FormData) {
     const { error } = await supabase.from("categories").insert(data);
 
     if (error) {
-        return { error: error.message };
+        return {
+            error: "Could not create the category — please try again.",
+            detail: error.message,
+        };
     }
 
     revalidatePath("/");
@@ -49,7 +52,10 @@ export async function updateCategory(id: string, formData: FormData) {
         .eq("id", id);
 
     if (error) {
-        return { error: error.message };
+        return {
+            error: "Could not update the category — please try again.",
+            detail: error.message,
+        };
     }
 
     revalidatePath("/");
@@ -63,7 +69,10 @@ export async function deleteCategory(id: string) {
     const { error } = await supabase.from("categories").delete().eq("id", id);
 
     if (error) {
-        return { error: error.message };
+        return {
+            error: "Could not delete the category — make sure no products are linked to it and try again.",
+            detail: error.message,
+        };
     }
 
     revalidatePath("/");

@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { Category } from "@/lib/types";
 import { deleteCategory } from "@/lib/category-actions";
+import { useToast } from "@/components/admin/ToastProvider";
 import { CategoryDialog } from "@/components/admin/CategoryDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 
 interface CategoriesGridProps {
     categories: Category[];
@@ -13,6 +15,45 @@ interface CategoriesGridProps {
 }
 
 export function CategoriesGrid({ categories, productCounts }: CategoriesGridProps) {
+    const { toast } = useToast();
+    // Track which category is being deleted
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+
+    async function handleDelete(categoryId: string, categoryName: string) {
+        if (
+            !confirm(
+                `Delete "${categoryName}"?\n\nThis will also unlink or delete all products in this category.`
+            )
+        )
+            return;
+
+        setDeletingId(categoryId);
+        try {
+            const result = await deleteCategory(categoryId);
+            if (result?.error) {
+                toast({
+                    variant: "error",
+                    message: result.error,
+                    detail: result.detail,
+                    duration: 8000,
+                });
+            } else {
+                toast({
+                    variant: "success",
+                    message: `"${categoryName}" was deleted successfully.`,
+                });
+            }
+        } catch (err) {
+            toast({
+                variant: "error",
+                message: "Something went wrong while deleting — please try again.",
+                detail: err instanceof Error ? err.message : String(err),
+            });
+        } finally {
+            setDeletingId(null);
+        }
+    }
+
     return (
         <div>
             {/* Header */}
@@ -34,63 +75,82 @@ export function CategoriesGrid({ categories, productCounts }: CategoriesGridProp
 
             {/* Grid */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {categories.map((category) => (
-                    <div
-                        key={category.id}
-                        className="group relative overflow-hidden rounded-xl border border-border/30 bg-card transition-shadow hover:shadow-md"
-                    >
-                        {/* Image */}
-                        <div className="relative aspect-[16/9] overflow-hidden bg-secondary/30">
-                            {category.image_url && (
-                                <Image
-                                    src={category.image_url}
-                                    alt={category.name}
-                                    fill
-                                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                                />
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                            <div className="absolute bottom-3 left-4 right-4">
-                                <h3 className="text-lg font-semibold text-white">{category.name}</h3>
-                                <p className="text-xs text-white/80">
-                                    {productCounts[category.id] || 0} products
-                                </p>
-                            </div>
-                        </div>
+                {categories.map((category) => {
+                    const isDeleting = deletingId === category.id;
 
-                        {/* Description + Actions */}
-                        <div className="p-4">
-                            {category.description && (
-                                <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
-                                    {category.description}
-                                </p>
+                    return (
+                        <div
+                            key={category.id}
+                            className="group relative overflow-hidden rounded-xl border border-border/30 bg-card transition-shadow hover:shadow-md"
+                            aria-busy={isDeleting}
+                        >
+                            {/* Deleting overlay */}
+                            {isDeleting && (
+                                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/70 backdrop-blur-sm">
+                                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                                </div>
                             )}
-                            <div className="flex gap-2">
-                                <CategoryDialog
-                                    category={category}
-                                    trigger={
-                                        <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-                                            <Pencil className="h-3 w-3" /> Edit
-                                        </Button>
-                                    }
-                                />
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="gap-1.5 text-xs text-destructive hover:text-destructive"
-                                    onClick={() => {
-                                        if (confirm(`Delete "${category.name}"? This will also delete all its products.`)) {
-                                            deleteCategory(category.id);
+
+                            {/* Image */}
+                            <div className="relative aspect-[16/9] overflow-hidden bg-secondary/30">
+                                {category.image_url && (
+                                    <Image
+                                        src={category.image_url}
+                                        alt={category.name}
+                                        fill
+                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                    />
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                                <div className="absolute bottom-3 left-4 right-4">
+                                    <h3 className="text-lg font-semibold text-white">{category.name}</h3>
+                                    <p className="text-xs text-white/80">
+                                        {productCounts[category.id] || 0} products
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Description + Actions */}
+                            <div className="p-4">
+                                {category.description && (
+                                    <p className="mb-3 text-sm text-muted-foreground line-clamp-2">
+                                        {category.description}
+                                    </p>
+                                )}
+                                <div className="flex gap-2">
+                                    <CategoryDialog
+                                        category={category}
+                                        trigger={
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="gap-1.5 text-xs"
+                                                disabled={isDeleting}
+                                            >
+                                                <Pencil className="h-3 w-3" /> Edit
+                                            </Button>
                                         }
-                                    }}
-                                >
-                                    <Trash2 className="h-3 w-3" /> Delete
-                                </Button>
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-1.5 text-xs text-destructive hover:text-destructive"
+                                        disabled={isDeleting}
+                                        onClick={() => handleDelete(category.id, category.name)}
+                                    >
+                                        {isDeleting ? (
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                            <Trash2 className="h-3 w-3" />
+                                        )}
+                                        {isDeleting ? "Deleting…" : "Delete"}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
 
                 {categories.length === 0 && (
                     <div className="col-span-full py-16 text-center text-sm text-muted-foreground">
