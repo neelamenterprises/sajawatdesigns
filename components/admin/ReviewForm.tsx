@@ -40,7 +40,7 @@ export function ReviewForm({ review, trigger }: ReviewFormProps) {
             }
 
             if (res.error) {
-                toast({ message: res.error, variant: "error" });
+                toast({ message: res.error, detail: res.detail, variant: "error" });
             } else {
                 toast({
                     message: `Review successfully ${review ? "updated" : "added"}.`,
