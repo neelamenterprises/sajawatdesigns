@@ -46,8 +46,8 @@ export function HeroBanner() {
                             size="lg"
                             className="h-12 rounded-full px-8 text-sm font-medium tracking-wide shadow-md transition-all hover:shadow-lg hover:scale-[1.02]"
                         >
-                            <Link href="/category/rings">
-                                Explore Collection
+                            <Link href="/collections">
+                                Explore Collections
                                 <ArrowRight className="ml-2 h-4 w-4" />
                             </Link>
                         </Button>
