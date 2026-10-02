@@ -15,16 +15,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useWishlist } from "@/components/store/WishlistProvider";
 
-const categories = [
-    { name: "Rings", slug: "rings" },
-    { name: "Earrings", slug: "earrings" },
-    { name: "Necklaces", slug: "necklaces" },
-    { name: "Bracelets", slug: "bracelets" },
-    { name: "Mangalsutra", slug: "mangalsutra" },
-    { name: "Anklets & Chains", slug: "anklets-chains" },
-];
+interface NavbarProps {
+    categories: { name: string; slug: string }[];
+}
 
-export function Navbar() {
+export function Navbar({ categories }: NavbarProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
     const router = useRouter();
@@ -81,6 +76,9 @@ export function Navbar() {
                                     <Link href={`/category/${cat.slug}`} className="text-sm">{cat.name}</Link>
                                 </DropdownMenuItem>
                             ))}
+                            <DropdownMenuItem asChild className="border-t border-border/50 mt-1 pt-2 font-medium text-primary focus:text-primary">
+                                <Link href="/collections">View All Collections</Link>
+                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                     <Link href="/about">
@@ -162,6 +160,14 @@ export function Navbar() {
                                             </Button>
                                         </Link>
                                     ))}
+                                    <Link href="/collections">
+                                        <Button
+                                            variant="ghost"
+                                            className="w-full justify-start pl-6 text-sm font-medium text-primary mt-1"
+                                        >
+                                            View All Collections
+                                        </Button>
+                                    </Link>
                                 </div>
                                 <Link href="/about">
                                     <Button variant="ghost" className="w-full justify-start text-sm tracking-wide">

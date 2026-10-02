@@ -2,17 +2,21 @@ import { HeroBanner } from "@/components/ui/HeroBanner";
 import { CategoryCard } from "@/components/ui/CategoryCard";
 import { TrustBadges } from "@/components/ui/TrustBadges";
 import { ProductCard } from "@/components/products/ProductCard";
-import { getCategories, getTrendingProducts, getFeaturedProducts } from "@/lib/queries";
+import { getCategoriesWithProductCount, getTrendingProducts, getFeaturedProducts } from "@/lib/queries";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default async function HomePage() {
-  const [categories, trendingProducts, featuredProducts] = await Promise.all([
-    getCategories(),
+  const [categoriesWithCount, trendingProducts, featuredProducts] = await Promise.all([
+    getCategoriesWithProductCount(),
     getTrendingProducts(),
     getFeaturedProducts(),
   ]);
+
+  // Top 5 categories by product count
+  const topCategories = categoriesWithCount.slice(0, 5);
+  const totalCategories = categoriesWithCount.length;
 
   return (
     <div>
@@ -22,21 +26,40 @@ export default async function HomePage() {
       {/* Trust Badges */}
       <TrustBadges />
 
-      {/* Collections */}
+      {/* Collections — top 5 */}
       <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mb-10 text-center">
-          <h2 className="font-serif text-3xl font-semibold tracking-tight italic sm:text-4xl">
-            Our Collections
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Explore jewellery handpicked for every occasion
-          </p>
+        <div className="mb-10 flex items-end justify-between">
+          <div>
+            <h2 className="font-serif text-3xl font-semibold tracking-tight italic sm:text-4xl">
+              Our Collections
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Explore jewellery handpicked for every occasion
+            </p>
+          </div>
+          {totalCategories > 5 && (
+            <Link href="/collections">
+              <Button variant="ghost" className="hidden gap-1 text-primary sm:inline-flex">
+                All Collections <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          )}
         </div>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {categories.map((category) => (
-            <CategoryCard key={category.id} category={category} />
+          {topCategories.map((category) => (
+            <CategoryCard key={category.id} category={category} productCount={category.productCount} />
           ))}
         </div>
+        {/* Mobile: show link below grid */}
+        {totalCategories > 5 && (
+          <div className="mt-8 flex justify-center sm:hidden">
+            <Button asChild variant="outline" className="gap-2 rounded-full">
+              <Link href="/collections">
+                View All {totalCategories} Collections <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        )}
       </section>
 
       {/* Trending — "Most Loved" */}

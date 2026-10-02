@@ -2,22 +2,18 @@ import Link from "next/link";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
+import { getCategoriesWithProductCount } from "@/lib/queries";
+
 const quickLinks = [
     { name: "Home", href: "/" },
     { name: "About Us", href: "/about" },
     { name: "Search", href: "/search" },
 ];
 
-const collections = [
-    { name: "Rings", href: "/category/rings" },
-    { name: "Earrings", href: "/category/earrings" },
-    { name: "Necklaces", href: "/category/necklaces" },
-    { name: "Bracelets", href: "/category/bracelets" },
-    { name: "Mangalsutra", href: "/category/mangalsutra" },
-    { name: "Anklets & Chains", href: "/category/anklets-chains" },
-];
-
-export function Footer() {
+export async function Footer() {
+    const categoriesWithCount = await getCategoriesWithProductCount();
+    const topCollections = categoriesWithCount.slice(0, 5);
+    const hasMore = categoriesWithCount.length > 5;
     return (
         <footer className="border-t border-border/40 bg-card">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -68,16 +64,26 @@ export function Footer() {
                             Collections
                         </h3>
                         <ul className="space-y-3">
-                            {collections.map((cat) => (
-                                <li key={cat.name}>
+                            {topCollections.map((cat) => (
+                                <li key={cat.id}>
                                     <Link
-                                        href={cat.href}
+                                        href={`/category/${cat.slug}`}
                                         className="text-sm text-muted-foreground transition-colors hover:text-primary"
                                     >
                                         {cat.name}
                                     </Link>
                                 </li>
                             ))}
+                            {hasMore && (
+                                <li>
+                                    <Link
+                                        href="/collections"
+                                        className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                                    >
+                                        View All Collections &rarr;
+                                    </Link>
+                                </li>
+                            )}
                         </ul>
                     </div>
 

@@ -5,9 +5,11 @@ import { ArrowRight } from "lucide-react";
 
 interface CategoryCardProps {
     category: Category;
+    /** Optional product count badge — shown when provided */
+    productCount?: number;
 }
 
-export function CategoryCard({ category }: CategoryCardProps) {
+export function CategoryCard({ category, productCount }: CategoryCardProps) {
     return (
         <Link href={`/category/${category.slug}`} className="group block">
             <div className="relative overflow-hidden rounded-2xl bg-[#fdf8f3] border border-border/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5">
@@ -21,7 +23,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
                         className="object-cover transition-all duration-500 group-hover:scale-105"
                     />
                     {/* Elegant gradient overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
                 </div>
 
                 {/* Content */}
@@ -29,9 +31,16 @@ export function CategoryCard({ category }: CategoryCardProps) {
                     <h3 className="font-serif text-xl font-semibold text-white drop-shadow-md italic">
                         {category.name}
                     </h3>
-                    <div className="mt-2 flex items-center gap-1 text-white/80">
-                        <span className="text-xs tracking-wide uppercase">Explore</span>
-                        <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+                    <div className="mt-2 flex items-center justify-between">
+                        <div className="flex items-center gap-1 text-white/80">
+                            <span className="text-xs tracking-wide uppercase">Explore</span>
+                            <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
+                        </div>
+                        {productCount !== undefined && productCount > 0 && (
+                            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+                                {productCount} {productCount === 1 ? "item" : "items"}
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>

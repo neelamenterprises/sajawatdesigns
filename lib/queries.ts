@@ -27,6 +27,58 @@ export async function getCategories(): Promise<Category[]> {
     return data ?? mockCategories;
 }
 
+export interface CategoryWithCount extends Category {
+    productCount: number;
+}
+
+/**
+ * Fetches all categories with their active product counts,
+ * sorted by product count descending (most-stocked first).
+ * Used for homepage top-5 and /collections page.
+ */
+export async function getCategoriesWithProductCount(): Promise<CategoryWithCount[]> {
+    if (!isSupabaseConfigured) {
+        // Mock: assign arbitrary counts
+        return mockCategories.map((c, i) => ({ ...c, productCount: (6 - i) * 3 }));
+    }
+
+    const { createClient } = await import("./supabase/server");
+    const supabase = await createClient();
+
+    // Fetch all categories + count of active products per category in one query
+    const { data: categories, error: catErr } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name");
+
+    if (catErr || !categories) {
+        console.error("Error fetching categories with count:", catErr);
+        return mockCategories.map((c, i) => ({ ...c, productCount: 0 }));
+    }
+
+    // Count active products per category
+    const { data: counts, error: countErr } = await supabase
+        .from("products")
+        .select("category_id")
+        .eq("is_active", true);
+
+    if (countErr) {
+        return categories.map((c) => ({ ...c, productCount: 0 }));
+    }
+
+    // Build a count map
+    const countMap: Record<string, number> = {};
+    for (const row of counts ?? []) {
+        countMap[row.category_id] = (countMap[row.category_id] ?? 0) + 1;
+    }
+
+    // Merge and sort descending by product count
+    return categories
+        .map((c) => ({ ...c, productCount: countMap[c.id] ?? 0 }))
+        .sort((a, b) => b.productCount - a.productCount);
+}
+
+
 export async function getCategoryBySlug(slug: string): Promise<Category | null> {
     if (!isSupabaseConfigured) {
         return mockCategories.find((c) => c.slug === slug) ?? null;
