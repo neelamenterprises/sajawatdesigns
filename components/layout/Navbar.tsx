@@ -13,6 +13,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useWishlist } from "@/components/store/WishlistProvider";
 
 const categories = [
     { name: "Rings", slug: "rings" },
@@ -27,6 +28,7 @@ export function Navbar() {
     const [searchQuery, setSearchQuery] = useState("");
     const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
     const router = useRouter();
+    const { count: wishlistCount } = useWishlist();
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -117,10 +119,17 @@ export function Navbar() {
                         {mobileSearchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
                     </Button>
 
-                    {/* Wishlist (cosmetic) */}
-                    <Button variant="ghost" size="icon" className="hidden h-9 w-9 sm:flex">
-                        <Heart className="h-4 w-4" />
-                    </Button>
+                    {/* Wishlist */}
+                    <Link href="/wishlist" aria-label={`Wishlist (${wishlistCount} items)`}>
+                        <Button variant="ghost" size="icon" className="relative hidden h-9 w-9 sm:flex">
+                            <Heart className="h-4 w-4" />
+                            {wishlistCount > 0 && (
+                                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                                    {wishlistCount > 9 ? "9+" : wishlistCount}
+                                </span>
+                            )}
+                        </Button>
+                    </Link>
 
                     {/* Mobile Menu */}
                     <Sheet>

@@ -6,8 +6,9 @@ import { RelatedProducts } from "@/components/products/RelatedProducts";
 import { ProductGallery } from "@/components/products/ProductGallery";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Check, Heart, Share2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check } from "lucide-react";
+import { WishlistButton } from "@/components/store/WishlistButton";
+import { ShareButton } from "@/components/store/ShareButton";
 
 interface ProductPageProps {
     params: Promise<{ slug: string }>;
@@ -53,8 +54,64 @@ export default async function ProductPage({ params }: ProductPageProps) {
         .filter((s) => s.trim().length > 10)
         .slice(0, 5);
 
+    const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sajawatdesigns.com";
+
+    // JSON-LD structured data for Google rich snippets (price, availability in search results)
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: product.name,
+        description: product.description,
+        image: product.images,
+        sku: product.id,
+        brand: {
+            "@type": "Brand",
+            name: "Sajawat Designs",
+        },
+        offers: {
+            "@type": "AggregateOffer",
+            priceCurrency: "INR",
+            lowPrice: product.price,
+            highPrice: product.mrp,
+            offerCount: [product.amazon_url, product.flipkart_url, product.meesho_url].filter(Boolean).length || 1,
+            offers: [
+                product.amazon_url && {
+                    "@type": "Offer",
+                    url: product.amazon_url,
+                    priceCurrency: "INR",
+                    price: product.price,
+                    availability: "https://schema.org/InStock",
+                    seller: { "@type": "Organization", name: "Amazon India" },
+                },
+                product.flipkart_url && {
+                    "@type": "Offer",
+                    url: product.flipkart_url,
+                    priceCurrency: "INR",
+                    price: product.price,
+                    availability: "https://schema.org/InStock",
+                    seller: { "@type": "Organization", name: "Flipkart" },
+                },
+                product.meesho_url && {
+                    "@type": "Offer",
+                    url: product.meesho_url,
+                    priceCurrency: "INR",
+                    price: product.price,
+                    availability: "https://schema.org/InStock",
+                    seller: { "@type": "Organization", name: "Meesho" },
+                },
+            ].filter(Boolean),
+        },
+        url: `${BASE_URL}/product/${product.slug}`,
+        keywords: product.tags.join(", "),
+    };
+
     return (
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            {/* JSON-LD for Google rich snippets */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
             {/* Breadcrumb */}
             <nav className="mb-6 text-xs text-muted-foreground tracking-wide uppercase">
                 <a href="/" className="hover:text-primary transition-colors">
@@ -142,12 +199,24 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
                     {/* Wishlist / Share */}
                     <div className="mb-6 flex gap-3">
-                        <Button variant="outline" size="sm" className="gap-2 rounded-full text-xs">
-                            <Heart className="h-3.5 w-3.5" /> Add to Wishlist
-                        </Button>
-                        <Button variant="outline" size="sm" className="gap-2 rounded-full text-xs">
-                            <Share2 className="h-3.5 w-3.5" /> Share
-                        </Button>
+                        <WishlistButton
+                            productId={product.id}
+                            productName={product.name}
+                            productData={{
+                                id: product.id,
+                                name: product.name,
+                                slug: product.slug,
+                                price: product.price,
+                                mrp: product.mrp,
+                                image: product.images[0] || "",
+                                short_description: product.short_description,
+                            }}
+                            variant="page"
+                        />
+                        <ShareButton
+                            title={product.name}
+                            text={product.short_description}
+                        />
                     </div>
 
                     <Separator className="mb-6" />

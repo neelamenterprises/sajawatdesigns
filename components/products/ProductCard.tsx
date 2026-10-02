@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Product } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
-import { Heart } from "lucide-react";
+import { WishlistButton } from "@/components/store/WishlistButton";
 
 interface ProductCardProps {
     product: Product;
@@ -46,10 +46,23 @@ export function ProductCard({ product }: ProductCardProps) {
                         </Badge>
                     )}
 
-                    {/* Wishlist heart */}
-                    <button className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-muted-foreground opacity-0 shadow-sm backdrop-blur-sm transition-all duration-200 hover:text-primary group-hover:opacity-100">
-                        <Heart className="h-4 w-4" />
-                    </button>
+                    {/* Wishlist heart — functional */}
+                    <div className="absolute right-3 top-3">
+                        <WishlistButton
+                            productId={product.id}
+                            productName={product.name}
+                            productData={{
+                                id: product.id,
+                                name: product.name,
+                                slug: product.slug,
+                                price: product.price,
+                                mrp: product.mrp,
+                                image: product.images[0] || "",
+                                short_description: product.short_description,
+                            }}
+                            variant="card"
+                        />
+                    </div>
 
                     {/* Quick View Overlay */}
                     <div className="absolute inset-0 flex items-end justify-center pb-4 opacity-0 transition-all duration-300 group-hover:opacity-100">
