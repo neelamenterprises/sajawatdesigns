@@ -14,6 +14,7 @@ import {
 import { addReview, updateReview } from "@/lib/review-actions";
 import { Testimonial } from "@/lib/types";
 import { useToast } from "@/components/admin/ToastProvider";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 
 interface ReviewFormProps {
     review?: Testimonial;
@@ -23,6 +24,7 @@ interface ReviewFormProps {
 export function ReviewForm({ review, trigger }: ReviewFormProps) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [images, setImages] = useState<string[]>(review?.image_url ? [review.image_url] : []);
     const { toast } = useToast();
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -30,6 +32,9 @@ export function ReviewForm({ review, trigger }: ReviewFormProps) {
         setLoading(true);
 
         const formData = new FormData(e.currentTarget);
+        if (images.length > 0) {
+            formData.set("image_url", images[0]);
+        }
         
         try {
             let res;
@@ -74,12 +79,11 @@ export function ReviewForm({ review, trigger }: ReviewFormProps) {
                 <div className="mt-6">
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="mb-2 block text-sm font-medium">Customer Name</label>
+                            <label className="mb-2 block text-sm font-medium">Customer Name (Optional)</label>
                             <Input
                                 name="customer_name"
                                 defaultValue={review?.customer_name}
                                 placeholder="e.g. Priya Sharma"
-                                required
                             />
                         </div>
 
@@ -111,13 +115,21 @@ export function ReviewForm({ review, trigger }: ReviewFormProps) {
                         </div>
 
                         <div>
-                            <label className="mb-2 block text-sm font-medium">Review Content</label>
+                            <label className="mb-2 block text-sm font-medium">Review Content (Optional)</label>
                             <textarea
                                 name="content"
                                 defaultValue={review?.content}
                                 className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                                 placeholder="Write the review text here..."
-                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="mb-2 block text-sm font-medium">Screenshot Image (Optional)</label>
+                            <ImageUpload
+                                value={images}
+                                onChange={setImages}
+                                maxImages={1}
                             />
                         </div>
 

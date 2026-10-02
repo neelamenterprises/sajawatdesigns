@@ -48,10 +48,11 @@ export interface ProductFilters {
 
 export interface Testimonial {
   id: string;
-  customer_name: string;
+  customer_name?: string;
   platform: "amazon" | "flipkart" | "meesho" | "direct";
   rating: number;
-  content: string;
+  content?: string;
+  image_url?: string;
   is_active: boolean;
   created_at: string;
 }

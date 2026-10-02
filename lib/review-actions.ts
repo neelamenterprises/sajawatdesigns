@@ -7,10 +7,11 @@ export async function addReview(formData: FormData) {
     const supabase = await createClient();
 
     const data = {
-        customer_name: formData.get("customer_name") as string,
+        customer_name: (formData.get("customer_name") as string) || null,
         platform: formData.get("platform") as string,
         rating: Number(formData.get("rating")),
-        content: formData.get("content") as string,
+        content: (formData.get("content") as string) || null,
+        image_url: (formData.get("image_url") as string) || null,
         is_active: formData.get("is_active") === "on",
     };
 
@@ -32,10 +33,11 @@ export async function updateReview(id: string, formData: FormData) {
     const supabase = await createClient();
 
     const data = {
-        customer_name: formData.get("customer_name") as string,
+        customer_name: (formData.get("customer_name") as string) || null,
         platform: formData.get("platform") as string,
         rating: Number(formData.get("rating")),
-        content: formData.get("content") as string,
+        content: (formData.get("content") as string) || null,
+        image_url: (formData.get("image_url") as string) || null,
         is_active: formData.get("is_active") === "on",
     };
 
