@@ -33,10 +33,23 @@ export async function ReviewList() {
                         key={review.id}
                         className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 p-4 text-sm transition-colors hover:bg-muted/50"
                     >
-                        <div>
-                            <div className="font-medium text-foreground">{review.customer_name}</div>
-                            <div className="mt-1 line-clamp-1 text-muted-foreground">
-                                {review.content}
+                        <div className="flex items-center gap-4">
+                            {review.image_url && (
+                                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-md border bg-muted">
+                                    <img 
+                                        src={review.image_url} 
+                                        alt="Screenshot" 
+                                        className="h-full w-full object-cover" 
+                                    />
+                                </div>
+                            )}
+                            <div>
+                                <div className="font-medium text-foreground">
+                                    {review.customer_name || <span className="italic text-muted-foreground">Anonymous</span>}
+                                </div>
+                                <div className="mt-1 line-clamp-1 text-muted-foreground">
+                                    {review.content || (review.image_url ? <span className="italic">Image Review</span> : <span className="italic">No content</span>)}
+                                </div>
                             </div>
                         </div>
                         <div className="w-24 text-center uppercase tracking-wider text-xs font-semibold text-muted-foreground">
