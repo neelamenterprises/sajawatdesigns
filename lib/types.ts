@@ -45,3 +45,13 @@ export interface ProductFilters {
   page?: number;
   limit?: number;
 }
+
+export interface Testimonial {
+  id: string;
+  customer_name: string;
+  platform: "amazon" | "flipkart" | "meesho" | "direct";
+  rating: number;
+  content: string;
+  is_active: boolean;
+  created_at: string;
+}

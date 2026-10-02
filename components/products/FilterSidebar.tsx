@@ -20,6 +20,15 @@ const platformOptions = [
     { id: "meesho", label: "Meesho", color: "#E91E63" },
 ];
 
+const occasionOptions = [
+    { id: "wedding", label: "Wedding" },
+    { id: "party", label: "Party" },
+    { id: "everyday", label: "Everyday Wear" },
+    { id: "gifting", label: "Gifting" },
+    { id: "engagement", label: "Engagement" },
+    { id: "festive", label: "Festive" },
+];
+
 interface FilterSidebarProps {
     maxPriceLimit?: number;
 }
@@ -33,6 +42,7 @@ function FilterContent({ maxPriceLimit = 5000 }: FilterSidebarProps) {
     const currentMaxPrice =
         Number(searchParams.get("maxPrice")) || maxPriceLimit;
     const currentPlatforms = searchParams.get("platforms")?.split(",") || [];
+    const currentTags = searchParams.get("tags")?.split(",") || [];
 
     const [priceRange, setPriceRange] = useState<number[]>([
         currentMinPrice,
@@ -65,6 +75,15 @@ function FilterContent({ maxPriceLimit = 5000 }: FilterSidebarProps) {
         });
     };
 
+    const handleTagToggle = (tagId: string, checked: boolean) => {
+        const newTags = checked
+            ? [...currentTags, tagId]
+            : currentTags.filter((t) => t !== tagId);
+        updateFilters({
+            tags: newTags.length > 0 ? newTags.join(",") : null,
+        });
+    };
+
     const handlePriceApply = () => {
         updateFilters({
             minPrice: priceRange[0] > 0 ? String(priceRange[0]) : null,
@@ -79,6 +98,7 @@ function FilterContent({ maxPriceLimit = 5000 }: FilterSidebarProps) {
 
     const hasActiveFilters =
         currentPlatforms.length > 0 ||
+        currentTags.length > 0 ||
         currentMinPrice > 0 ||
         currentMaxPrice < maxPriceLimit;
 
@@ -100,7 +120,7 @@ function FilterContent({ maxPriceLimit = 5000 }: FilterSidebarProps) {
                 )}
             </div>
 
-            <Accordion type="multiple" defaultValue={["price", "platform"]} className="w-full">
+            <Accordion type="multiple" defaultValue={["price", "platform", "occasions"]} className="w-full">
                 {/* Price Range */}
                 <AccordionItem value="price">
                     <AccordionTrigger className="text-sm font-medium">
@@ -161,6 +181,31 @@ function FilterContent({ maxPriceLimit = 5000 }: FilterSidebarProps) {
                                         />
                                         {platform.label}
                                     </span>
+                                </label>
+                            ))}
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+
+                {/* Occasions (Tags) */}
+                <AccordionItem value="occasions">
+                    <AccordionTrigger className="text-sm font-medium">
+                        Shop by Occasion
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <div className="space-y-3 pt-2">
+                            {occasionOptions.map((occ) => (
+                                <label
+                                    key={occ.id}
+                                    className="flex cursor-pointer items-center gap-3"
+                                >
+                                    <Checkbox
+                                        checked={currentTags.includes(occ.id)}
+                                        onCheckedChange={(checked) =>
+                                            handleTagToggle(occ.id, checked === true)
+                                        }
+                                    />
+                                    <span className="text-sm">{occ.label}</span>
                                 </label>
                             ))}
                         </div>

@@ -2,16 +2,18 @@ import { HeroBanner } from "@/components/ui/HeroBanner";
 import { CategoryCard } from "@/components/ui/CategoryCard";
 import { TrustBadges } from "@/components/ui/TrustBadges";
 import { ProductCard } from "@/components/products/ProductCard";
-import { getCategoriesWithProductCount, getTrendingProducts, getFeaturedProducts } from "@/lib/queries";
+import { TestimonialCarousel } from "@/components/ui/TestimonialCarousel";
+import { getCategoriesWithProductCount, getTrendingProducts, getFeaturedProducts, getTestimonials } from "@/lib/queries";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default async function HomePage() {
-  const [categoriesWithCount, trendingProducts, featuredProducts] = await Promise.all([
+  const [categoriesWithCount, trendingProducts, featuredProducts, testimonials] = await Promise.all([
     getCategoriesWithProductCount(),
     getTrendingProducts(),
     getFeaturedProducts(),
+    getTestimonials(),
   ]);
 
   // Top 5 categories by product count
@@ -61,6 +63,9 @@ export default async function HomePage() {
           </div>
         )}
       </section>
+
+      {/* Reviews / Testimonials */}
+      <TestimonialCarousel testimonials={testimonials} />
 
       {/* Trending — "Most Loved" */}
       {trendingProducts.length > 0 && (

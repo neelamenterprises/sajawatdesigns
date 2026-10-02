@@ -137,6 +137,11 @@ export async function getProducts(filters: ProductFilters = {}): Promise<{
         query = query.or(orClauses);
     }
 
+    if (filters.tags && filters.tags.length > 0) {
+        // overlaps returns true if the arrays have any element in common
+        query = query.overlaps("tags", filters.tags);
+    }
+
     // Sort
     switch (filters.sort) {
         case "price-low-high":
@@ -330,6 +335,12 @@ function getFilteredMockProducts(filters: ProductFilters): {
         );
     }
 
+    if (filters.tags && filters.tags.length > 0) {
+        results = results.filter((p) =>
+            filters.tags!.some((tag) => p.tags.includes(tag))
+        );
+    }
+
     if (filters.search) {
         const q = filters.search.toLowerCase();
         results = results.filter(
@@ -367,4 +378,55 @@ function getFilteredMockProducts(filters: ProductFilters): {
     results = results.slice(from, from + limit);
 
     return { products: results, total };
+}
+
+// ─── Testimonials ──────────────────────────────────────────────────
+
+export async function getTestimonials(all: boolean = false): Promise<import("./types").Testimonial[]> {
+    if (!isSupabaseConfigured) {
+        return [
+            {
+                id: "1",
+                customer_name: "Priya Sharma",
+                platform: "amazon",
+                rating: 5,
+                content: "Absolutely beautiful necklace! The quality is amazing for the price. I wore it to a wedding and got so many compliments.",
+                is_active: true,
+                created_at: new Date().toISOString(),
+            },
+            {
+                id: "2",
+                customer_name: "Sneha Patel",
+                platform: "flipkart",
+                rating: 5,
+                content: "These earrings are so elegant and lightweight. Perfect for everyday wear or office.",
+                is_active: true,
+                created_at: new Date().toISOString(),
+            },
+            {
+                id: "3",
+                customer_name: "Ananya Desai",
+                platform: "meesho",
+                rating: 4,
+                content: "Very pretty rings. The packaging was great and delivery was fast. Satisfied with the purchase.",
+                is_active: true,
+                created_at: new Date().toISOString(),
+            }
+        ];
+    }
+
+    const { createClient } = await import("./supabase/server");
+    const supabase = await createClient();
+    
+    let query = supabase.from("testimonials").select("*").order("created_at", { ascending: false });
+    if (!all) query = query.eq("is_active", true);
+
+    const { data, error } = await query;
+
+    if (error) {
+        console.error("Error fetching testimonials:", error);
+        return [];
+    }
+
+    return data;
 }

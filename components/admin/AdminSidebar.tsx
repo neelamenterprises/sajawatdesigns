@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, FolderOpen, LogOut, Gem } from "lucide-react";
+import { LayoutDashboard, Package, FolderOpen, LogOut, Gem, Star } from "lucide-react";
 import { signOut } from "@/lib/admin-actions";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,7 @@ const navItems = [
     { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
     { href: "/admin/products", icon: Package, label: "Products" },
     { href: "/admin/categories", icon: FolderOpen, label: "Categories" },
+    { href: "/admin/reviews", icon: Star, label: "Reviews" },
 ];
 
 interface AdminSidebarProps {
