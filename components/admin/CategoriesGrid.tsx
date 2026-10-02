@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Category } from "@/lib/types";
-import { deleteCategory } from "@/lib/category-actions";
+import { deleteCategory, getProductCountForCategory } from "@/lib/category-actions";
 import { useToast } from "@/components/admin/ToastProvider";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { CategoryDialog } from "@/components/admin/CategoryDialog";
 import { Button } from "@/components/ui/button";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
@@ -14,22 +15,45 @@ interface CategoriesGridProps {
     productCounts: Record<string, number>;
 }
 
+interface DeleteTarget {
+    id: string;
+    name: string;
+    productCount: number | null; // null = still loading the count
+}
+
 export function CategoriesGrid({ categories, productCounts }: CategoriesGridProps) {
     const { toast } = useToast();
-    // Track which category is being deleted
-    const [deletingId, setDeletingId] = useState<string | null>(null);
 
-    async function handleDelete(categoryId: string, categoryName: string) {
-        if (
-            !confirm(
-                `Delete "${categoryName}"?\n\nThis will also unlink or delete all products in this category.`
-            )
-        )
-            return;
+    // The category staged for deletion (opens the confirm dialog)
+    const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+    // Whether the actual delete call is running
+    const [isDeleting, setIsDeleting] = useState(false);
+    // Which card is fetching its product count (spinner on the button)
+    const [fetchingCountFor, setFetchingCountFor] = useState<string | null>(null);
 
-        setDeletingId(categoryId);
+    /** Clicking Delete first fetches the live product count, then opens the dialog */
+    async function requestDelete(category: Category) {
+        setFetchingCountFor(category.id);
         try {
-            const result = await deleteCategory(categoryId);
+            const count = await getProductCountForCategory(category.id);
+            setDeleteTarget({ id: category.id, name: category.name, productCount: count });
+        } catch {
+            // Fall back to count from props if the fetch fails
+            setDeleteTarget({
+                id: category.id,
+                name: category.name,
+                productCount: productCounts[category.id] ?? 0,
+            });
+        } finally {
+            setFetchingCountFor(null);
+        }
+    }
+
+    async function confirmDelete() {
+        if (!deleteTarget) return;
+        setIsDeleting(true);
+        try {
+            const result = await deleteCategory(deleteTarget.id);
             if (result?.error) {
                 toast({
                     variant: "error",
@@ -40,7 +64,7 @@ export function CategoriesGrid({ categories, productCounts }: CategoriesGridProp
             } else {
                 toast({
                     variant: "success",
-                    message: `"${categoryName}" was deleted successfully.`,
+                    message: `"${deleteTarget.name}" and all its products were deleted.`,
                 });
             }
         } catch (err) {
@@ -50,12 +74,46 @@ export function CategoriesGrid({ categories, productCounts }: CategoriesGridProp
                 detail: err instanceof Error ? err.message : String(err),
             });
         } finally {
-            setDeletingId(null);
+            setIsDeleting(false);
+            setDeleteTarget(null);
         }
     }
 
+    // Build consequences list for the confirm dialog
+    const deleteConsequences = (() => {
+        if (!deleteTarget) return [];
+        const lines = [`Delete the category "${deleteTarget.name}"`];
+        const count = deleteTarget.productCount ?? 0;
+        if (count > 0) {
+            lines.push(
+                `Permanently delete ${count} product${count === 1 ? "" : "s"} inside this category`
+            );
+            lines.push("Remove those products from the storefront immediately");
+        }
+        return lines;
+    })();
+
     return (
         <div>
+            {/* Confirm Delete Dialog */}
+            <ConfirmDialog
+                open={!!deleteTarget}
+                onOpenChange={(v) => {
+                    if (!v && !isDeleting) setDeleteTarget(null);
+                }}
+                title="Delete Category?"
+                description={
+                    deleteTarget?.productCount
+                        ? `You are about to delete "${deleteTarget.name}" which contains ${deleteTarget.productCount} product${deleteTarget.productCount === 1 ? "" : "s"}. All of them will be permanently removed.`
+                        : `You are about to delete "${deleteTarget?.name ?? ""}". This action cannot be reversed.`
+                }
+                consequences={deleteConsequences}
+                confirmLabel="Yes, Delete Everything"
+                variant="danger"
+                loading={isDeleting}
+                onConfirm={confirmDelete}
+            />
+
             {/* Header */}
             <div className="mb-6 flex items-center justify-between">
                 <div>
@@ -76,21 +134,13 @@ export function CategoriesGrid({ categories, productCounts }: CategoriesGridProp
             {/* Grid */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {categories.map((category) => {
-                    const isDeleting = deletingId === category.id;
+                    const isFetchingCount = fetchingCountFor === category.id;
 
                     return (
                         <div
                             key={category.id}
                             className="group relative overflow-hidden rounded-xl border border-border/30 bg-card transition-shadow hover:shadow-md"
-                            aria-busy={isDeleting}
                         >
-                            {/* Deleting overlay */}
-                            {isDeleting && (
-                                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-background/70 backdrop-blur-sm">
-                                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                                </div>
-                            )}
-
                             {/* Image */}
                             <div className="relative aspect-[16/9] overflow-hidden bg-secondary/30">
                                 {category.image_url && (
@@ -126,7 +176,7 @@ export function CategoriesGrid({ categories, productCounts }: CategoriesGridProp
                                                 variant="outline"
                                                 size="sm"
                                                 className="gap-1.5 text-xs"
-                                                disabled={isDeleting}
+                                                disabled={isFetchingCount}
                                             >
                                                 <Pencil className="h-3 w-3" /> Edit
                                             </Button>
@@ -136,15 +186,15 @@ export function CategoriesGrid({ categories, productCounts }: CategoriesGridProp
                                         variant="outline"
                                         size="sm"
                                         className="gap-1.5 text-xs text-destructive hover:text-destructive"
-                                        disabled={isDeleting}
-                                        onClick={() => handleDelete(category.id, category.name)}
+                                        disabled={isFetchingCount}
+                                        onClick={() => requestDelete(category)}
                                     >
-                                        {isDeleting ? (
+                                        {isFetchingCount ? (
                                             <Loader2 className="h-3 w-3 animate-spin" />
                                         ) : (
                                             <Trash2 className="h-3 w-3" />
                                         )}
-                                        {isDeleting ? "Deleting…" : "Delete"}
+                                        {isFetchingCount ? "Checking…" : "Delete"}
                                     </Button>
                                 </div>
                             </div>

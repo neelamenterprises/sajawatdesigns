@@ -63,6 +63,17 @@ export async function updateCategory(id: string, formData: FormData) {
     return { success: true };
 }
 
+export async function getProductCountForCategory(categoryId: string): Promise<number> {
+    const supabase = await createClient();
+    const { count, error } = await supabase
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .eq("category_id", categoryId);
+
+    if (error) return 0;
+    return count ?? 0;
+}
+
 export async function deleteCategory(id: string) {
     const supabase = await createClient();
 
@@ -70,7 +81,7 @@ export async function deleteCategory(id: string) {
 
     if (error) {
         return {
-            error: "Could not delete the category — make sure no products are linked to it and try again.",
+            error: "Could not delete the category — please try again.",
             detail: error.message,
         };
     }

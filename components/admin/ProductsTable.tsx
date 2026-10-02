@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Product, Category } from "@/lib/types";
 import { deleteProduct, toggleProductField } from "@/lib/product-actions";
 import { useToast } from "@/components/admin/ToastProvider";
+import { ConfirmDialog } from "@/components/admin/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -33,14 +34,22 @@ interface ProductsTableProps {
     categories: Category[];
 }
 
-// Tracks which action is in-flight for a specific product
-type ActionKey = "is_active" | "is_featured" | "is_trending" | "delete";
+// Tracks which toggle-action is in-flight for a specific product
+type ActionKey = "is_active" | "is_featured" | "is_trending";
+
+interface DeleteTarget {
+    id: string;
+    name: string;
+}
 
 export function ProductsTable({ products, categories }: ProductsTableProps) {
     const { toast } = useToast();
     const [search, setSearch] = useState("");
-    // loadingMap[productId] = which action is loading (or undefined)
+    // loadingMap[productId] = which toggle-action is loading (or undefined)
     const [loadingMap, setLoadingMap] = useState<Record<string, ActionKey | undefined>>({});
+    // Product staged for deletion
+    const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const categoryMap = Object.fromEntries(categories.map((c) => [c.id, c.name]));
 
@@ -56,7 +65,7 @@ export function ProductsTable({ products, categories }: ProductsTableProps) {
 
     async function handleToggle(
         productId: string,
-        field: "is_active" | "is_featured" | "is_trending",
+        field: ActionKey,
         currentValue: boolean
     ) {
         setLoading(productId, field);
@@ -66,18 +75,15 @@ export function ProductsTable({ products, categories }: ProductsTableProps) {
                 toast({
                     variant: "error",
                     message: "Could not update product — please try again.",
-                    detail: result.error,
+                    detail: result.detail ?? result.error,
                 });
             } else {
-                const labels: Record<string, string> = {
+                const labels: Record<ActionKey, string> = {
                     is_active: currentValue ? "deactivated" : "activated",
                     is_featured: currentValue ? "unfeatured" : "featured",
                     is_trending: currentValue ? "removed from trending" : "marked as trending",
                 };
-                toast({
-                    variant: "success",
-                    message: `Product ${labels[field]} successfully.`,
-                });
+                toast({ variant: "success", message: `Product ${labels[field]} successfully.` });
             }
         } catch (err) {
             toast({
@@ -90,21 +96,21 @@ export function ProductsTable({ products, categories }: ProductsTableProps) {
         }
     }
 
-    async function handleDelete(productId: string, productName: string) {
-        if (!confirm(`Delete "${productName}"? This cannot be undone.`)) return;
-        setLoading(productId, "delete");
+    async function confirmDelete() {
+        if (!deleteTarget) return;
+        setIsDeleting(true);
         try {
-            const result = await deleteProduct(productId);
+            const result = await deleteProduct(deleteTarget.id);
             if (result?.error) {
                 toast({
                     variant: "error",
                     message: "Could not delete product — please try again.",
-                    detail: result.error,
+                    detail: result.detail ?? result.error,
                 });
             } else {
                 toast({
                     variant: "success",
-                    message: `"${productName}" was deleted successfully.`,
+                    message: `"${deleteTarget.name}" was deleted successfully.`,
                 });
             }
         } catch (err) {
@@ -114,12 +120,32 @@ export function ProductsTable({ products, categories }: ProductsTableProps) {
                 detail: err instanceof Error ? err.message : String(err),
             });
         } finally {
-            setLoading(productId, undefined);
+            setIsDeleting(false);
+            setDeleteTarget(null);
         }
     }
 
     return (
         <div>
+            {/* Confirm Delete Dialog */}
+            <ConfirmDialog
+                open={!!deleteTarget}
+                onOpenChange={(v) => {
+                    if (!v && !isDeleting) setDeleteTarget(null);
+                }}
+                title="Delete Product?"
+                description={`You are about to permanently delete "${deleteTarget?.name ?? ""}". This will remove it from the storefront immediately.`}
+                consequences={[
+                    `Remove "${deleteTarget?.name ?? ""}" from the product catalogue`,
+                    "Remove it from all featured and trending sections",
+                    "Delete all associated data (images, pricing, platform links)",
+                ]}
+                confirmLabel="Yes, Delete Product"
+                variant="danger"
+                loading={isDeleting}
+                onConfirm={confirmDelete}
+            />
+
             {/* Header */}
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -305,15 +331,13 @@ export function ProductsTable({ products, categories }: ProductsTableProps) {
                                                     )}
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem
-                                                    onClick={() => handleDelete(product.id, product.name)}
+                                                    onClick={() =>
+                                                        setDeleteTarget({ id: product.id, name: product.name })
+                                                    }
                                                     disabled={isLoadingAny}
                                                     className="gap-2 text-destructive focus:text-destructive"
                                                 >
-                                                    {loadingMap[product.id] === "delete" ? (
-                                                        <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Deleting…</>
-                                                    ) : (
-                                                        <><Trash2 className="h-3.5 w-3.5" /> Delete</>
-                                                    )}
+                                                    <Trash2 className="h-3.5 w-3.5" /> Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
