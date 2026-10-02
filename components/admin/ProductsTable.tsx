@@ -100,7 +100,12 @@ export function ProductsTable({ products, categories }: ProductsTableProps) {
                                             </div>
                                         )}
                                         <div className="min-w-0">
-                                            <p className="truncate font-medium">{product.name}</p>
+                                            <Link
+                                                href={`/admin/products/${product.id}/edit`}
+                                                className="truncate font-medium hover:text-primary transition-colors block"
+                                            >
+                                                {product.name}
+                                            </Link>
                                             <p className="truncate text-xs text-muted-foreground">
                                                 {product.short_description}
                                             </p>
